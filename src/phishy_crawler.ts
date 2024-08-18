@@ -1,6 +1,6 @@
 import getRunningConfig from './config/running_config'
 import crawlSingleUrl from './utils/single_url_crawler'
-import mysql, { createPool, Pool } from 'mysql'
+import mysql, { Pool } from 'mysql'
 import { MongoClient } from 'mongodb'
 import { benignLogger, phishyLogger } from './utils/logger'
 import dumpCrawledResults from './utils/dump_results'
@@ -8,7 +8,7 @@ import dumpCrawledResults from './utils/dump_results'
 let mongodbClient: MongoClient;
 let mysqlConnPool: Pool;
 
-const isBenign = true;
+const isBenign = false;
 
 const runningConfig = getRunningConfig(isBenign);
 const runningLogger = isBenign ? benignLogger : phishyLogger;
@@ -18,8 +18,8 @@ const runningLogger = isBenign ? benignLogger : phishyLogger;
     // Connect to MongoDB.
     mongodbClient = new MongoClient(runningConfig.mongodbConnString);
     await mongodbClient.connect();
-    const mongodbDatabase = mongodbClient.db("benign_urls");
-    const mongodbCollection = mongodbDatabase.collection("crux_top_urls");
+    const mongodbDatabase = mongodbClient.db("phishy_urls");
+    const mongodbCollection = mongodbDatabase.collection("main");
 
     // Connect to mysql.
     // Create mysql connection pool.
@@ -32,7 +32,7 @@ const runningLogger = isBenign ? benignLogger : phishyLogger;
         charset: runningConfig.mysqlConnConfig.charset
     });
 
-    const querySql = "SELECT url FROM benign.crux_top_urls WHERE is_crawled is false LIMIT 5000";
+    const querySql = "SELECT url FROM phishy.test WHERE is_accessible is null LIMIT 100";
 
     mysqlConnPool.query(querySql, async (error, queryResults, fields) => {
         if (error) {
@@ -64,7 +64,7 @@ const runningLogger = isBenign ? benignLogger : phishyLogger;
             await Promise.all(promises);
         }
 
-        const batchSize = 7;
+        const batchSize = 4;
         for (let i = 0; i < urls.length; i += batchSize) {
             const urlsBatch = urls.slice(i, i + batchSize);
             await processUrlsBatch(urlsBatch);

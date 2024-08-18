@@ -4,13 +4,17 @@ import { Logger } from "winston";
 import { strHashValue } from './misc'
 import { singleInsert, singleUpdate } from "./mysql_utils";
 
-export default async function dumpCrawledResults(url: string, crawledResult: any, mysqlConn: Connection | Pool, mongodbColl: Collection, logger: Logger) {
+export default async function dumpCrawledResults(isBenign: boolean, url: string, crawledResult: any, mysqlConn: Connection | Pool, mongodbColl: Collection, logger: Logger) {
     const urlHashValue = strHashValue(url, 'sha256');
+
+    const url_table = `${isBenign ? 'benign' : 'phishy'}.${isBenign ? 'crux_top_urls' : 'test'}`;
+    const error_table = `${isBenign ? 'benign' : 'phishy'}.${isBenign ? 'crux_top_urls' : 'test'}_error`;
+
     if (crawledResult.accessible) {
         // Define the sql statements.
-        const singleUrlsUpdateSql = `UPDATE benign.crux_top_urls SET is_crawled = ?, page_url = ?, is_accessible = ?, status_code = ?, ip = ?, port = ?, title = ?, is_completed = ?, last_crawled_time = NOW() WHERE url_sha256 = ?`;
+        const singleUrlsUpdateSql = `UPDATE ${url_table} SET is_crawled = ?, page_url = ?, is_accessible = ?, status_code = ?, ip = ?, port = ?, title = ?, is_completed = ?, last_crawled_time = NOW() WHERE url_sha256 = ?`;
         // Try dump crawledResult to mysql.
-        logger.info(`${urlHashValue} | Start to dump crawledResult into table: benign.crux_top_urls .`)
+        logger.info(`${urlHashValue} | Start to dump crawledResult into table: ${url_table} .`)
         await singleUpdate(
             mysqlConn, singleUrlsUpdateSql, [
             true,
@@ -24,15 +28,15 @@ export default async function dumpCrawledResults(url: string, crawledResult: any
             urlHashValue
         ]
         ).then((changedRows) => {
-            logger.info(`${urlHashValue} | Succeed to dump crawledResult into table: benign.crux_top_urls , changedRows: ${changedRows}.`)
+            logger.info(`${urlHashValue} | Succeed to dump crawledResult into table: ${url_table} , changedRows: ${changedRows}.`)
         }).catch((updateError) => {
-            logger.error(`Failed to dump crawledResult into table: benign.crux_top_urls .\n${updateError}`);
+            logger.error(`Failed to dump crawledResult into table: ${url_table} .\n${updateError}`);
         });
 
     } else {
-        const singleUrlsUpdateSql = `UPDATE benign.crux_top_urls SET is_crawled = ?, is_accessible = ?, last_crawled_time = NOW() WHERE url_sha256 = ?`;
-        const accessErrorUrlsSql = `INSERT IGNORE INTO benign.crux_top_urls_error (url, url_sha256, error_info) VALUES (?, ?, ?)`;
-        logger.info(`${urlHashValue} | Start to dump crawledResult into table: benign.crux_top_urls .`)
+        const singleUrlsUpdateSql = `UPDATE ${url_table} SET is_crawled = ?, is_accessible = ?, last_crawled_time = NOW() WHERE url_sha256 = ?`;
+        const accessErrorUrlsSql = `INSERT IGNORE INTO ${error_table} (url, url_sha256, error_info) VALUES (?, ?, ?)`;
+        logger.info(`${urlHashValue} | Start to dump crawledResult into table: ${url_table} .`)
         await singleUpdate(
             mysqlConn, singleUrlsUpdateSql, [
             true,
@@ -40,18 +44,18 @@ export default async function dumpCrawledResults(url: string, crawledResult: any
             urlHashValue
         ]
         ).then((changedRows) => {
-            logger.info(`${urlHashValue} | Succeed to dump crawledResult into table: benign.crux_top_urls , changedRows: ${changedRows}.`)
+            logger.info(`${urlHashValue} | Succeed to dump crawledResult into table: ${url_table} , changedRows: ${changedRows}.`)
         }).catch((updateError) => {
-            logger.error(`Failed to dump crawledResult into table: benign.crux_top_urls .\n${updateError}`);
+            logger.error(`Failed to dump crawledResult into table: ${url_table} .\n${updateError}`);
         });
 
         logger.info('${urlHashValue} | Start to dump access error record into table: crux_top_urls_error.')
         await singleInsert(
             mysqlConn, accessErrorUrlsSql, [url, urlHashValue, crawledResult.accessErrorInfo]
         ).then((insertId) => {
-            logger.info(`${urlHashValue} | Succeed to dump access error record into table: crux_top_urls_error, insertId: ${insertId}.`)
+            logger.info(`${urlHashValue} | Succeed to dump access error record into table: ${error_table}, insertId: ${insertId}.`)
         }).catch((insertError) => {
-            logger.error(`${urlHashValue} | Failed to dump access error record into table: crux_top_urls_error.\n${insertError}`);
+            logger.error(`${urlHashValue} | Failed to dump access error record into table: ${error_table}.\n${insertError}`);
         });
 
     }
