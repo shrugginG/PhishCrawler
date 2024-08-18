@@ -5,3 +5,8 @@ node_modules/
 /playwright/.cache/
 playwright*
 package*
+test*
+tmp*
+config/
+*.log
+logs/
