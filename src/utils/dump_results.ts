@@ -67,6 +67,7 @@ export default async function dumpCrawledResults(isBenign: boolean, url: string,
                 await mongodbColl.replaceOne({
                     _id: crawledResult._id
                 }, crawledResult);
+                logger.info(`${urlHashValue} | Succeed to replace the crawledResult in mongodb.`);
             } catch (replaceError) {
                 logger.error(`${urlHashValue} | Failed to replace the crawledResult in mongodb.\n${replaceError}`);
             }

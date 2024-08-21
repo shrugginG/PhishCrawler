@@ -297,8 +297,18 @@ export default async function crawlSingleUrl(url: string, userDataPath: string, 
         logger.info(`${urlHashValue} | Start closing current page and context: ${url} !`);
         await currentPage.close();
         logger.info(`${urlHashValue} | Current page: ${url} closed!`);
+        try {
+            await persistContext.close();
+            logger.info(`${urlHashValue} | Persist context: ${url} closed!`);
+        } catch (error: any) {
+            if (error.message === 'Target page, context or browser has been closed') { // Many URLs will close along with the context when the page is closed, leading to TargetClosedError, e.g., https://www.bepal.net/.
+                logger.error(`${urlHashValue} | Failed to close persist context: ${url} !\n${error}`);
+            } else {
+                logger.error(`${urlHashValue} | Unseen Error: ${url} !\n${error}`);
+                throw error;
+            }
+        }
         await persistContext.close();
-        logger.info(`${urlHashValue} | Persist context: ${url} closed!`);
 
         result.har = true;
         resultRecord.har = true;

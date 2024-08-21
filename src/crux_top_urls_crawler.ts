@@ -33,6 +33,7 @@ const runningLogger = isBenign ? benignLogger : phishyLogger;
     });
 
     const querySql = "SELECT url FROM benign.crux_top_urls WHERE is_crawled is false LIMIT 5000";
+    // const querySql = "SELECT url FROM benign.crux_top_urls WHERE status_code >= 400 AND status_code < 500 AND last_crawled_time < '2024-08-19 21:30:00'";
 
     mysqlConnPool.query(querySql, async (error, queryResults, fields) => {
         if (error) {
