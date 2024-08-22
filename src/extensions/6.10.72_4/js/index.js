@@ -82,27 +82,29 @@ const Driver = {
     }
 
     const { version } = chrome.runtime.getManifest()
-    const previous = await getOption('version')
-    const upgradeMessage = await getOption('upgradeMessage', true)
+
+    // Close Wappalyzer welcome page.
+    // const previous = await getOption('version')
+    // const upgradeMessage = await getOption('upgradeMessage', true)
 
     await setOption('version', version)
 
-    const current = await getOption('version')
+    // const current = await getOption('version')
 
-    if (!previous) {
-      await Driver.clearCache()
+    // if (!previous) {
+    //   await Driver.clearCache()
 
-      if (current) {
-        open(
-          'https://www.wappalyzer.com/installed/?utm_source=installed&utm_medium=extension&utm_campaign=wappalyzer'
-        )
-      }
-    } else if (version !== previous && upgradeMessage) {
-      open(
-        `https://www.wappalyzer.com/upgraded/?utm_source=upgraded&utm_medium=extension&utm_campaign=wappalyzer`,
-        false
-      )
-    }
+    //   if (current) {
+    //     open(
+    //       'https://www.wappalyzer.com/installed/?utm_source=installed&utm_medium=extension&utm_campaign=wappalyzer'
+    //     )
+    //   }
+    // } else if (version !== previous && upgradeMessage) {
+    //   open(
+    //     `https://www.wappalyzer.com/upgraded/?utm_source=upgraded&utm_medium=extension&utm_campaign=wappalyzer`,
+    //     false
+    //   )
+    // }
 
     initDone()
   },
