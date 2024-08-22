@@ -1,5 +1,6 @@
 import getRunningConfig from './config/running_config'
-import crawlSingleUrl from './utils/single_url_crawler'
+// import crawlSingleUrl from './utils/single_url_crawler'
+import crawlSingleUrl from './utils/single_phishy_url_crawler'
 import mysql, { Pool } from 'mysql'
 import { MongoClient } from 'mongodb'
 import { benignLogger, phishyLogger } from './utils/logger'
@@ -32,7 +33,9 @@ const runningLogger = isBenign ? benignLogger : phishyLogger;
         charset: runningConfig.mysqlConnConfig.charset
     });
 
-    const querySql = "SELECT url FROM phishy.test WHERE is_accessible is null LIMIT 100";
+    // const querySql = "SELECT url FROM phishy.test WHERE is_accessible is null LIMIT 100";
+    // const querySql = "SELECT url FROM phishy.phishy_urls WHERE is_crawled = TRUE AND id > 332046 AND title = 'Suspected phishing site | Cloudflare'"
+    const querySql = "SELECT url FROM phishy.phishy_urls WHERE is_crawled = FALSE AND id > 332046";
 
     mysqlConnPool.query(querySql, async (error, queryResults, fields) => {
         if (error) {
@@ -41,6 +44,7 @@ const runningLogger = isBenign ? benignLogger : phishyLogger;
         }
 
         const urls = queryResults.map((row: { url: string }) => row.url)
+        runningLogger.info(`This batch contains ${urls.length} URLs.`);
 
         async function processUrlsBatch(urlsBatch: string[]) {
             const promises = urlsBatch.map(async (url) => {

@@ -7,8 +7,8 @@ import { singleInsert, singleUpdate } from "./mysql_utils";
 export default async function dumpCrawledResults(isBenign: boolean, url: string, crawledResult: any, mysqlConn: Connection | Pool, mongodbColl: Collection, logger: Logger) {
     const urlHashValue = strHashValue(url, 'sha256');
 
-    const url_table = `${isBenign ? 'benign' : 'phishy'}.${isBenign ? 'crux_top_urls' : 'test'}`;
-    const error_table = `${isBenign ? 'benign' : 'phishy'}.${isBenign ? 'crux_top_urls' : 'test'}_error`;
+    const url_table = `${isBenign ? 'benign' : 'phishy'}.${isBenign ? 'crux_top_urls' : 'phishy_urls'}`;
+    const error_table = `${isBenign ? 'benign' : 'phishy'}.${isBenign ? 'crux_top_urls' : 'phishy_urls'}_error`;
 
     if (crawledResult.accessible) {
         // Define the sql statements.
