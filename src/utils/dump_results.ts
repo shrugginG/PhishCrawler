@@ -30,7 +30,7 @@ export default async function dumpCrawledResults(isBenign: boolean, url: string,
         ).then((changedRows) => {
             logger.info(`${urlHashValue} | Succeed to dump crawledResult into table: ${url_table} , changedRows: ${changedRows}.`)
         }).catch((updateError) => {
-            logger.error(`Failed to dump crawledResult into table: ${url_table} .\n${updateError}`);
+            logger.error(`${urlHashValue} | Failed to dump crawledResult into table: ${url_table} .\n${updateError}`);
         });
 
     } else {
@@ -46,7 +46,7 @@ export default async function dumpCrawledResults(isBenign: boolean, url: string,
         ).then((changedRows) => {
             logger.info(`${urlHashValue} | Succeed to dump crawledResult into table: ${url_table} , changedRows: ${changedRows}.`)
         }).catch((updateError) => {
-            logger.error(`Failed to dump crawledResult into table: ${url_table} .\n${updateError}`);
+            logger.error(`${urlHashValue} | Failed to dump crawledResult into table: ${url_table} .\n${updateError}`);
         });
 
         logger.info('${urlHashValue} | Start to dump access error record into table: crux_top_urls_error.')
