@@ -1,9 +1,10 @@
-import getRunningConfig from './config/running_config'
-import crawlSingleUrl from './utils/single_url_crawler'
-import mysql, { createPool, Pool } from 'mysql'
-import { MongoClient } from 'mongodb'
-import { benignLogger, phishyLogger } from './utils/logger'
-import dumpCrawledResults from './utils/dump_results'
+import getRunningConfig from "./config/running_config";
+import crawlSingleUrl from "./utils/single_url_crawler";
+import mysql, { Pool } from "mysql";
+import { MongoClient } from "mongodb";
+import { benignLogger, phishyLogger } from "./utils/logger";
+import dumpCrawledResults from "./utils/dump_results";
+import { checkLock, releaseLock } from "./utils/crawl_lock";
 
 let mongodbClient: MongoClient;
 let mysqlConnPool: Pool;
@@ -13,35 +14,50 @@ const isBenign = true;
 const runningConfig = getRunningConfig(isBenign);
 const runningLogger = isBenign ? benignLogger : phishyLogger;
 
-(async () => {
-
-    // Connect to MongoDB.
-    mongodbClient = new MongoClient(runningConfig.mongodbConnString);
-    await mongodbClient.connect();
-    const mongodbDatabase = mongodbClient.db("benign_urls");
-    const mongodbCollection = mongodbDatabase.collection("crux_top_urls");
-
-    // Connect to mysql.
-    // Create mysql connection pool.
-    mysqlConnPool = mysql.createPool({
-        connectionLimit: 7,
-        host: runningConfig.mysqlConnConfig.host,
-        port: runningConfig.mysqlConnConfig.port,
-        user: runningConfig.mysqlConnConfig.user,
-        password: runningConfig.mysqlConnConfig.password,
-        charset: runningConfig.mysqlConnConfig.charset
+const executeQuery = (querySql: string): Promise<any[]> => {
+    return new Promise((resolve, reject) => {
+        mysqlConnPool.query(querySql, (error, queryResults) => {
+            if (error) {
+                return reject(error);
+            }
+            resolve(queryResults);
+        });
     });
+};
 
-    const querySql = "SELECT url FROM benign.crux_top_urls WHERE is_crawled is false LIMIT 100";
-    // const querySql = "SELECT url FROM benign.crux_top_urls WHERE status_code >= 400 AND status_code < 500 AND last_crawled_time < '2024-08-19 21:30:00'";
+(async () => {
+    if (checkLock(runningLogger, isBenign)) {
+        await new Promise((resolve) => setTimeout(resolve, 1000)); // Wait for 1 second to write log.
+        process.exit(0);
+    }
 
-    mysqlConnPool.query(querySql, async (error, queryResults, fields) => {
-        if (error) {
-            console.error(error);
-            return;
-        }
+    try {
+        // Connect to MongoDB.
+        mongodbClient = new MongoClient(runningConfig.mongodbConnString);
+        await mongodbClient.connect();
+        const mongodbDatabase = mongodbClient.db("benign_urls");
+        const mongodbCollection = mongodbDatabase.collection("crux_top_urls");
 
-        const urls = queryResults.map((row: { url: string }) => row.url)
+        // Connect to mysql.
+        // Create mysql connection pool.
+        mysqlConnPool = mysql.createPool({
+            connectionLimit: 7,
+            host: runningConfig.mysqlConnConfig.host,
+            port: runningConfig.mysqlConnConfig.port,
+            user: runningConfig.mysqlConnConfig.user,
+            password: runningConfig.mysqlConnConfig.password,
+            charset: runningConfig.mysqlConnConfig.charset,
+        });
+        const querySql =
+            "SELECT url FROM benign.crux_top_urls WHERE is_crawled is false LIMIT 200";
+        // const querySql =
+        //     "SELECT url FROM benign.crux_top_urls WHERE id >=23067 AND is_completed = false;";
+        // const querySql = "SELECT url FROM benign.crux_top_urls WHERE status_code >= 400 AND status_code < 500 AND last_crawled_time < '2024-08-19 21:30:00'";
+
+        const queryResults = await executeQuery(querySql);
+        const urls = queryResults.map((row: { url: string }) => row.url);
+
+        runningLogger.info(`This batch contains ${urls.length} URLs`);
 
         async function processUrlsBatch(urlsBatch: string[]) {
             const promises = urlsBatch.map(async (url) => {
@@ -50,15 +66,17 @@ const runningLogger = isBenign ? benignLogger : phishyLogger;
                     runningConfig.userDataDir,
                     runningConfig.archiveDir,
                     runningLogger,
-                )
-                console.log(crawled_result[1]);
+                );
+                runningLogger.info(
+                    `${(crawled_result[0] as any)["_id"]} | Crawled result: ${JSON.stringify(crawled_result[1])}`,
+                );
                 await dumpCrawledResults(
                     isBenign,
                     url,
                     crawled_result[0],
                     mysqlConnPool,
                     mongodbCollection,
-                    runningLogger
+                    runningLogger,
                 );
             });
 
@@ -76,16 +94,33 @@ const runningLogger = isBenign ? benignLogger : phishyLogger;
                 console.error("Error closing MySQL connection pool.", err);
             } else {
                 console.log("MySQL connection pool closed.");
-
             }
         });
 
         await mongodbClient.close();
         console.log("MongoDB connection closed.");
-
+    } catch (runningError) {
+        runningLogger.error(`Error during execution: ${runningError}`);
+    } finally {
+        releaseLock(runningLogger, isBenign);
         process.exit(0);
-
-    });
-
-
+    }
 })();
+
+process.on("SIGINT", () => {
+    console.log("Received SIGINT. Exiting gracefully...");
+    releaseLock(runningLogger, isBenign);
+    process.exit(0);
+});
+
+process.on("unhandledRejection", (reason, promise) => {
+    console.error("Unhandled Rejection at:", promise, "reason:", reason);
+    releaseLock(runningLogger, isBenign);
+    process.exit(1);
+});
+
+process.on("uncaughtException", (err) => {
+    console.error("Uncaught Exception:", err);
+    releaseLock(runningLogger, isBenign);
+    process.exit(1);
+});

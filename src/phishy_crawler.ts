@@ -27,7 +27,7 @@ const executeQuery = (querySql: string): Promise<any[]> => {
 };
 
 (async () => {
-    if (checkLock(runningLogger)) {
+    if (checkLock(runningLogger, isBenign)) {
         await new Promise((resolve) => setTimeout(resolve, 1000)); // Wait for 1 second to write log.
         process.exit(0);
     }
@@ -104,26 +104,26 @@ const executeQuery = (querySql: string): Promise<any[]> => {
     } catch (runningError) {
         runningLogger.error(`Error during execution: ${runningError}`);
     } finally {
-        releaseLock(runningLogger);
+        releaseLock(runningLogger, isBenign);
         process.exit(0);
     }
 })();
 
 process.on("SIGINT", () => {
     console.log("Received SIGINT. Exiting gracefully...");
-    releaseLock(runningLogger);
+    releaseLock(runningLogger, isBenign);
     process.exit(0);
 });
 
 process.on("unhandledRejection", (reason, promise) => {
     console.error("Unhandled Rejection at:", promise, "reason:", reason);
-    releaseLock(runningLogger);
+    releaseLock(runningLogger, isBenign);
     process.exit(1);
 });
 
 process.on("uncaughtException", (err) => {
     console.error("Uncaught Exception:", err);
-    releaseLock(runningLogger);
+    releaseLock(runningLogger, isBenign);
     process.exit(1);
 });
 

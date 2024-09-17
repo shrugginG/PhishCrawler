@@ -1,23 +1,24 @@
-import fs from 'fs';
-const lockFilePath = '/home/shrugging/project/PhishDetect/PhishCrawler/phishy_crawler.lock';
-import { Logger } from 'winston'
+import fs from "fs";
+import { Logger } from "winston";
 
-const checkLock = (logger: Logger): boolean => {
+const checkLock = (logger: Logger, isBenign: boolean): boolean => {
+    const lockFilePath = `/home/shrugging/project/PhishDetect/PhishCrawler/${isBenign ? "benign" : "phishy"}_crawler.lock`;
     if (fs.existsSync(lockFilePath)) {
-        logger.info('Lock file exists. Exiting...');
+        logger.info("Lock file exists. Exiting...");
         return true;
     } else {
         fs.writeFileSync(lockFilePath, process.pid.toString());
-        logger.info('Lock file created.');
+        logger.info("Lock file created.");
         return false;
     }
-}
+};
 
-const releaseLock = (logger: Logger): void => {
+const releaseLock = (logger: Logger, isBenign: boolean): void => {
+    const lockFilePath = `/home/shrugging/project/PhishDetect/PhishCrawler/${isBenign ? "benign" : "phishy"}_crawler.lock`;
     if (fs.existsSync(lockFilePath)) {
         fs.unlinkSync(lockFilePath);
-        logger.info('Lock file released.');
+        logger.info("Lock file released.");
     }
-}
+};
 
 export { checkLock, releaseLock };
