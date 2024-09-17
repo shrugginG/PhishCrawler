@@ -1,11 +1,11 @@
-import getRunningConfig from './config/running_config'
+import getRunningConfig from "./config/running_config";
 // import crawlSingleUrl from './utils/single_url_crawler'
-import crawlSingleUrl from './utils/single_phishy_url_crawler'
-import mysql, { Pool } from 'mysql'
-import { MongoClient } from 'mongodb'
-import { benignLogger, phishyLogger } from './utils/logger'
-import dumpCrawledResults from './utils/dump_results'
-import { checkLock, releaseLock } from './utils/crawl_lock'
+import crawlSingleUrl from "./utils/single_phishy_url_crawler";
+import mysql, { Pool } from "mysql";
+import { MongoClient } from "mongodb";
+import { benignLogger, phishyLogger } from "./utils/logger";
+import dumpCrawledResults from "./utils/dump_results";
+import { checkLock, releaseLock } from "./utils/crawl_lock";
 
 let mongodbClient: MongoClient;
 let mysqlConnPool: Pool;
@@ -27,7 +27,6 @@ const executeQuery = (querySql: string): Promise<any[]> => {
 };
 
 (async () => {
-
     if (checkLock(runningLogger)) {
         await new Promise((resolve) => setTimeout(resolve, 1000)); // Wait for 1 second to write log.
         process.exit(0);
@@ -48,12 +47,13 @@ const executeQuery = (querySql: string): Promise<any[]> => {
             port: runningConfig.mysqlConnConfig.port,
             user: runningConfig.mysqlConnConfig.user,
             password: runningConfig.mysqlConnConfig.password,
-            charset: runningConfig.mysqlConnConfig.charset
+            charset: runningConfig.mysqlConnConfig.charset,
         });
 
         // const querySql = "SELECT url FROM phishy.test WHERE is_accessible is null LIMIT 100";
         // const querySql = "SELECT url FROM phishy.phishy_urls WHERE is_crawled = TRUE AND id > 332046 AND title = 'Suspected phishing site | Cloudflare'"
-        const querySql = "SELECT url FROM phishy.phishy_urls WHERE is_crawled = FALSE AND id > 332046";
+        const querySql =
+            "SELECT url FROM phishy.phishy_urls WHERE is_crawled = FALSE AND id > 332046";
 
         const queryResults = await executeQuery(querySql);
 
@@ -67,16 +67,18 @@ const executeQuery = (querySql: string): Promise<any[]> => {
                     runningConfig.userDataDir,
                     runningConfig.archiveDir,
                     runningLogger,
-                )
-                runningLogger.info(`${(crawled_result[0] as any)['_id']} | Crawled result: ${JSON.stringify(crawled_result[1])}`);
-                console.log(crawled_result[1]);
+                );
+                runningLogger.info(
+                    `${(crawled_result[0] as any)["_id"]} | Crawled result: ${JSON.stringify(crawled_result[1])}`,
+                );
+                // console.log(crawled_result[1]);
                 await dumpCrawledResults(
                     isBenign,
                     url,
                     crawled_result[0],
                     mysqlConnPool,
                     mongodbCollection,
-                    runningLogger
+                    runningLogger,
                 );
             });
 
@@ -94,37 +96,34 @@ const executeQuery = (querySql: string): Promise<any[]> => {
                 console.error("Error closing MySQL connection pool.", err);
             } else {
                 console.log("MySQL connection pool closed.");
-
             }
         });
 
         await mongodbClient.close();
         console.log("MongoDB connection closed.");
-
     } catch (runningError) {
         runningLogger.error(`Error during execution: ${runningError}`);
     } finally {
         releaseLock(runningLogger);
         process.exit(0);
     }
-
-
 })();
 
-process.on('SIGINT', () => {
-    console.log('Received SIGINT. Exiting gracefully...');
+process.on("SIGINT", () => {
+    console.log("Received SIGINT. Exiting gracefully...");
     releaseLock(runningLogger);
     process.exit(0);
 });
 
-process.on('unhandledRejection', (reason, promise) => {
-    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+process.on("unhandledRejection", (reason, promise) => {
+    console.error("Unhandled Rejection at:", promise, "reason:", reason);
     releaseLock(runningLogger);
     process.exit(1);
 });
 
-process.on('uncaughtException', (err) => {
-    console.error('Uncaught Exception:', err);
+process.on("uncaughtException", (err) => {
+    console.error("Uncaught Exception:", err);
     releaseLock(runningLogger);
     process.exit(1);
 });
+
