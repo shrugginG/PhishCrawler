@@ -49,7 +49,7 @@ export default async function dumpCrawledResults(isBenign: boolean, url: string,
             logger.error(`${urlHashValue} | Failed to dump crawledResult into table: ${url_table} .\n${updateError}`);
         });
 
-        logger.info('${urlHashValue} | Start to dump access error record into table: crux_top_urls_error.')
+        logger.info(`${urlHashValue} | Start to dump access error record into table: crux_top_urls_error.`)
         await singleInsert(
             mysqlConn, accessErrorUrlsSql, [url, urlHashValue, crawledResult.accessErrorInfo]
         ).then((insertId) => {

@@ -68,6 +68,7 @@ const executeQuery = (querySql: string): Promise<any[]> => {
                     runningConfig.archiveDir,
                     runningLogger,
                 )
+                runningLogger.info(`${(crawled_result[0] as any)['_id']} | Crawled result: ${JSON.stringify(crawled_result[1])}`);
                 console.log(crawled_result[1]);
                 await dumpCrawledResults(
                     isBenign,
