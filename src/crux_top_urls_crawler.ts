@@ -1,29 +1,17 @@
 import getRunningConfig from "./config/running_config";
 import crawlSingleUrl from "./utils/single_url_crawler";
-import mysql, { Pool } from "mysql";
+import { Pool } from "pg";
 import { MongoClient } from "mongodb";
 import { benignLogger, phishyLogger } from "./utils/logger";
 import dumpCrawledResults from "./utils/dump_results";
 import { checkLock, releaseLock } from "./utils/crawl_lock";
 
 let mongodbClient: MongoClient;
-let mysqlConnPool: Pool;
 
 const isBenign = true;
 
 const runningConfig = getRunningConfig(isBenign);
 const runningLogger = isBenign ? benignLogger : phishyLogger;
-
-const executeQuery = (querySql: string): Promise<any[]> => {
-    return new Promise((resolve, reject) => {
-        mysqlConnPool.query(querySql, (error, queryResults) => {
-            if (error) {
-                return reject(error);
-            }
-            resolve(queryResults);
-        });
-    });
-};
 
 (async () => {
     if (checkLock(runningLogger, isBenign)) {
@@ -36,20 +24,30 @@ const executeQuery = (querySql: string): Promise<any[]> => {
         mongodbClient = new MongoClient(runningConfig.mongodbConnString);
         await mongodbClient.connect();
         const mongodbDatabase = mongodbClient.db("benign_urls");
-        const mongodbCollection = mongodbDatabase.collection("crux_top_urls");
+        const mongodbCollection = mongodbDatabase.collection("test");
 
-        // Connect to mysql.
-        // Create mysql connection pool.
-        mysqlConnPool = mysql.createPool({
-            connectionLimit: 7,
-            host: runningConfig.mysqlConnConfig.host,
-            port: runningConfig.mysqlConnConfig.port,
-            user: runningConfig.mysqlConnConfig.user,
-            password: runningConfig.mysqlConnConfig.password,
-            charset: runningConfig.mysqlConnConfig.charset,
+        const pgPool = new Pool({
+            host: runningConfig.postgrelConnConfig.host,
+            port: runningConfig.postgrelConnConfig.port,
+            user: runningConfig.postgrelConnConfig.user,
+            password: runningConfig.postgrelConnConfig.password,
+            database: runningConfig.postgrelConnConfig.database, // Specify your database
         });
+
+        // Execute PostgreSQL query
+        const executeQuery = (querySql: string): Promise<any[]> => {
+            return new Promise((resolve, reject) => {
+                pgPool.query(querySql, (error, result) => {
+                    if (error) {
+                        return reject(error);
+                    }
+                    resolve(result.rows); // Return rows instead of whole result
+                });
+            });
+        };
+
         const querySql =
-            "SELECT url FROM benign.crux_top_urls WHERE is_crawled is false LIMIT 200";
+            "SELECT url FROM crux_top_urls WHERE is_crawled is false LIMIT 10";
         // const querySql =
         //     "SELECT url FROM benign.crux_top_urls WHERE id >=23067 AND is_completed = false;";
         // const querySql = "SELECT url FROM benign.crux_top_urls WHERE status_code >= 400 AND status_code < 500 AND last_crawled_time < '2024-08-19 21:30:00'";
@@ -74,7 +72,7 @@ const executeQuery = (querySql: string): Promise<any[]> => {
                     isBenign,
                     url,
                     crawled_result[0],
-                    mysqlConnPool,
+                    pgPool,
                     mongodbCollection,
                     runningLogger,
                 );
@@ -89,13 +87,7 @@ const executeQuery = (querySql: string): Promise<any[]> => {
             await processUrlsBatch(urlsBatch);
         }
 
-        mysqlConnPool.end((err) => {
-            if (err) {
-                console.error("Error closing MySQL connection pool.", err);
-            } else {
-                console.log("MySQL connection pool closed.");
-            }
-        });
+        await pgPool.end();
 
         await mongodbClient.close();
         console.log("MongoDB connection closed.");

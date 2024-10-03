@@ -9,7 +9,7 @@ const phishyLogger = createLogger({
     transports: [
 
         new DailyRotateFile({
-            dirname: '/home/shrugging/project/PhishDetect/PhishCrawler/logs/phishy/',
+            dirname: '/home/jxlu/project/PhishDetect/PhishCrawler/logs/phishy/',
             filename: `%DATE%.log`,
             datePattern: 'YYYY-MM-DD',
             zippedArchive: true,
@@ -34,7 +34,7 @@ const benignLogger = createLogger({
     ),
     transports: [
         new DailyRotateFile({
-            dirname: '/home/shrugging/project/PhishDetect/PhishCrawler/logs/benign/crux_top_urls/',
+            dirname: '/home/jxlu/project/PhishDetect/PhishCrawler/logs/benign/crux_top_urls/',
             filename: `%DATE%.log`,
             datePattern: 'YYYY-MM-DD',
             zippedArchive: true,

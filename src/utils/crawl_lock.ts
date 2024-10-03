@@ -2,7 +2,7 @@ import fs from "fs";
 import { Logger } from "winston";
 
 const checkLock = (logger: Logger, isBenign: boolean): boolean => {
-    const lockFilePath = `/home/shrugging/project/PhishDetect/PhishCrawler/${isBenign ? "benign" : "phishy"}_crawler.lock`;
+    const lockFilePath = `/home/jxlu/project/PhishDetect/PhishCrawler/${isBenign ? "benign" : "phishy"}_crawler.lock`;
     if (fs.existsSync(lockFilePath)) {
         logger.info("Lock file exists. Exiting...");
         return true;
@@ -14,7 +14,7 @@ const checkLock = (logger: Logger, isBenign: boolean): boolean => {
 };
 
 const releaseLock = (logger: Logger, isBenign: boolean): void => {
-    const lockFilePath = `/home/shrugging/project/PhishDetect/PhishCrawler/${isBenign ? "benign" : "phishy"}_crawler.lock`;
+    const lockFilePath = `/home/jxlu/project/PhishDetect/PhishCrawler/${isBenign ? "benign" : "phishy"}_crawler.lock`;
     if (fs.existsSync(lockFilePath)) {
         fs.unlinkSync(lockFilePath);
         logger.info("Lock file released.");
